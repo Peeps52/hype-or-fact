@@ -1,0 +1,14 @@
+{
+  "name": "hype-or-fact",
+  "description": "Hype or Fact: judge viral Claude Code tools with a sandboxed blind A/B test against your own setup.",
+  "owner": {
+    "name": "Peeps52"
+  },
+  "plugins": [
+    {
+      "name": "hype-or-fact",
+      "source": "./",
+      "description": "Is that viral Claude Code tool worth installing? Sandboxed blind A/B test against your own setup."
+    }
+  ]
+}
