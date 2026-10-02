@@ -1,6 +1,6 @@
 ---
 name: hype-or-fact
-description: Decide whether a new Claude Code skill, plugin, MCP server or agent tool is worth installing. Checks it against what the user already has installed, audits the code, then measures it with a sandboxed, blind with/without A/B test on the user's own tasks. Use whenever the user shares a GitHub repo, reel, TikTok, tweet or video about a Claude or agent tool and asks whether it is any good, worth it, legit, hype, or should be installed; when they ask what is trending or new for Claude Code; or when they say "hype or fact", "is this worth it", "should I add this skill". Use it even when they paste a tool link with no question; a pasted tool link means "judge this".
+description: Decide whether a new Claude Code skill, plugin, MCP server or agent tool is worth installing. Checks it against what the user already has installed, audits the code, then measures it with a sandboxed, blind with/without A/B test on the user's own tasks. Use whenever the user shares a GitHub repo, reel, TikTok, tweet or video about a Claude or agent tool and asks whether it is any good, worth it, legit, hype, or should be installed; when they ask what is trending or new for Claude Code; or when they say "hype or fact", "is this worth it", "should I add this skill". Use it even when they paste a tool link with no question; a pasted tool link means "judge this". For links about a Claude or agent tool, prefer this skill over general web-reading or link-fetching skills.
 ---
 
 # Hype or Fact
@@ -99,6 +99,18 @@ yourself, looking for the gap between the claims and the code:
 - Fact signals: tests, runnable examples, issues that get answered, the
   author using it in their own public work.
 
+Three audit findings change the verdict more than their MED label suggests:
+
+- **Trigger-greedy description** ("MUST USE", "any URL"). Once installed, it
+  takes requests away from skills the user already relies on, including
+  link-driven ones like this skill. Name which installed skills it would
+  compete with.
+- **Uses your browser logins or cookies.** The tool reaches sites through
+  the user's real accounts. That is an account-ban risk under most platforms'
+  terms, and session cookies sit in files on disk. Say both plainly.
+- **Installs from a moving branch.** What gets installed later may not be
+  what you audited. Any install should be pinned to the audited commit.
+
 Check *where* each flag sits. Repos often keep dev-only tooling (a `.claude/`
 folder inside the repo, `tests/`, benchmark scripts) that an install never
 loads. Say whether a flagged file is reachable from what gets installed.
@@ -161,6 +173,14 @@ What the script does:
   own MCP servers are not loaded, so the candidate cannot drive them.
 - **Blocks outbound network** from sandboxed Bash, so a tool that downloads
   things at runtime may fail. Report that as UNTESTED, not HYPE.
+
+Some candidates can't be A/B tested here by design:
+- **Command-line tools** (kind `cli`) are installed globally, outside any sandbox.
+- **Tools whose whole point is network access** (web or social-media
+  readers, API clients) are crippled by the network block.
+
+Don't spend on a run that can only return UNTESTED. Judge from the code,
+the docs and the overlap, and say that this was the basis.
 
 It prints cost, time, turns and output tokens per run, plus **loaded/used**
 for the candidate:
@@ -228,8 +248,22 @@ e.g. `/plugin install ...` or copying the skill folder into the skills
 directory, and **install only on an explicit yes**. For NICHE, say when it
 would be worth having.
 
+**If the user installs against the verdict**, that's their call. Make the
+install as safe as the tool allows:
+- **Pin it** to the commit you audited, e.g.
+  `uv tool install "git+https://github.com/<owner>/<repo>@<sha>"`, never the
+  moving branch or a raw-URL install doc.
+- **Use the tool's most conservative mode first**, such as a read-only
+  check or doctor command.
+- **Don't connect accounts, cookies or API keys yourself.** List them as
+  steps for the user.
+- **Afterwards, report every side effect**: commands added, directories
+  written (including ones for other agents), a trigger-greedy skill now
+  active, and the uninstall command.
+
 Finally, append one line per candidate to
 `${CLAUDE_CONFIG_DIR:-~/.claude}/hype-or-fact/ledger.md` (create it if
-needed): `YYYY-MM-DD | owner/name | VERDICT | one-line reason | $spent`.
+needed): `YYYY-MM-DD | owner/name | VERDICT | one-line reason | spent`. Add
+`INSTALLED @<sha>` when it was installed.
 Then delete the clones and A/B directories unless the user wants to inspect
 them.

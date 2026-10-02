@@ -65,10 +65,48 @@ def test_skill_frontmatter_hooks_are_unsandboxed(tmp_path):
     assert any("frontmatter" in u for u in audit.audit(tmp_path)["unsandboxed"])
 
 
-def test_mcp_server_repo(tmp_path):
+def test_mcp_server_repo_is_detected_from_server_code(tmp_path):
     write(tmp_path / "package.json", '{"dependencies": {"@modelcontextprotocol/sdk": "1"}}')
+    write(tmp_path / "src" / "index.ts",
+          'import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";\n'
+          'const s = new McpServer({name: "x"});\n')
     r = audit.audit(tmp_path)
-    assert r["kind"] == "mcp" and r["unsandboxed"]
+    assert r["kind"] == "mcp" and any("is an MCP server" in u for u in r["unsandboxed"])
+
+
+def test_mcp_keyword_alone_is_not_a_server(tmp_path):
+    # Agent-Reach lists "mcp" in its keywords and an optional extra; it is a CLI.
+    write(tmp_path / "pyproject.toml",
+          '[project]\nkeywords = ["mcp"]\n[project.optional-dependencies]\nall = ["mcp[cli]>=1.0"]\n'
+          '[project.scripts]\ntool = "pkg.cli:main"\n')
+    r = audit.audit(tmp_path)
+    assert r["kind"] == "cli" and r["unsandboxed"] == []
+
+
+def test_cli_with_optional_server_names_the_file(tmp_path):
+    write(tmp_path / "pyproject.toml", '[project.scripts]\ntool = "pkg.cli:main"\n')
+    write(tmp_path / "pkg" / "integrations" / "mcp_server.py", "from mcp.server import Server\n")
+    r = audit.audit(tmp_path)
+    assert r["kind"] == "cli"
+    assert r["unsandboxed"] == ["includes an optional MCP server (runs as its own process if "
+                                "registered): pkg/integrations/mcp_server.py"]
+
+
+def test_greedy_trigger_description_is_reported(tmp_path):
+    make_skill(tmp_path, desc="MUST USE when the user shares any URL or link.")
+    assert audit.audit(tmp_path)["greedy_triggers"] == ["skills/fancy: MUST USE, any URL"]
+    make_skill(tmp_path / "calm", desc="Use when the user asks for an Excalidraw diagram.")
+    assert audit.audit(tmp_path / "calm")["greedy_triggers"] == []
+
+
+def test_browser_cookie_use_and_moving_branch_installs_are_flagged(tmp_path):
+    make_skill(tmp_path)
+    write(tmp_path / "auth.py", 'import browser_cookie3\nPATH = "~/Library/Application Support/Google/Chrome"\n')
+    write(tmp_path / "install.sh",
+          "pip install https://github.com/a/b/archive/main.zip\n")
+    got = labels(audit.audit(tmp_path))
+    assert ("MED", "uses your browser logins or cookies") in got
+    assert ("MED", "installs from a moving branch") in got
 
 
 def test_description_cost_counts_multiline_descriptions(tmp_path):

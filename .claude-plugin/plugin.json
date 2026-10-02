@@ -1,6 +1,6 @@
 {
   "name": "hype-or-fact",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Is that viral Claude Code tool worth installing? Checks it against your setup, audits the code, and measures it with a sandboxed blind A/B test on your own tasks.",
   "author": { "name": "Peeps52", "url": "https://github.com/Peeps52" },
   "repository": "https://github.com/Peeps52/hype-or-fact",

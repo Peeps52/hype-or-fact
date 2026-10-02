@@ -116,7 +116,7 @@ def preflight(claude: str) -> None:
 
 def unsandboxed_surfaces(cand: Path, kind: str) -> list[str]:
     risks = list(classify(cand)["unsandboxed"])
-    if kind == "mcp" and not any("MCP" in r for r in risks):
+    if kind == "mcp" and not any("MCP server" in r for r in risks):
         risks.append("the candidate is an MCP server (runs as its own process)")
     return risks
 

@@ -60,11 +60,26 @@ PATTERNS = [
     ("MED", "edits global Claude settings", r"~/\.claude/settings(\.local)?\.json"),
     ("MED", "sudo", r"\bsudo\s+\S"),
     ("MED", "disables permission prompts", r"(dangerously-skip-permissions|bypassPermissions)"),
+    # Social platforms reached through the user's own logged-in sessions:
+    # account-ban risk, and session cookies in files on disk.
+    ("MED", "uses your browser logins or cookies",
+     r"(browser[_-]cookie3|cookies-from-browser|cookie-editor|"
+     r"Application Support/Google/Chrome|\.config/google-chrome|reuse[s]? (your )?Chrome log)"),
+    # What gets installed can change after the audit.
+    ("MED", "installs from a moving branch",
+     r"(archive/(main|master)\.(zip|tar\.gz)|raw\.githubusercontent\.com/\S+?/(main|master)/\S+\.(md|sh|py))"),
     # Call sites, not names: a logo library listing "mixpanel.svg" is data.
     ("MED", "sends telemetry",
      r"(posthog\.(init|capture)|api\.segment\.io|mixpanel\.(init|track)|"
      r"amplitude\.(init|track|getInstance)|sentry_sdk\.init|Sentry\.init)"),
 ]
+MCP_SERVER_RE = re.compile(
+    r"(FastMCP\(|from mcp\.server|import mcp\.server|mcp\.server\.(stdio|fastmcp)|"
+    r"McpServer\(|@modelcontextprotocol/sdk/server)")
+# Descriptions that claim every request ("MUST USE", "any URL") win the
+# trigger over skills the user already relies on.
+GREEDY_RE = re.compile(r"(\bMUST USE\b|\bALWAYS use\b|\bany (URL|link)s?\b|\bevery (request|task|URL|link)\b|"
+                       r"\bfor (any|all) (web|internet|request)s?\b)", re.I)
 URL_RE = re.compile(r"https?://([a-zA-Z0-9.-]+\.[a-z]{2,})")
 BENIGN_DOMAINS = {"github.com", "raw.githubusercontent.com", "docs.anthropic.com",
                   "anthropic.com", "claude.ai", "claude.com", "code.claude.com",
@@ -141,19 +156,26 @@ def classify(root: Path) -> dict:
         if re.search(r"^hooks\s*:", fm, re.M):
             unsandboxed.append(f"hooks in frontmatter: {rel(sk)}")
 
-    mcp = False
-    pkg = root / "package.json"
-    if pkg.exists() and "@modelcontextprotocol/" in pkg.read_text(errors="replace"):
-        mcp = True
-    for f in ("pyproject.toml", "requirements.txt", "setup.py"):
-        fp = root / f
-        if fp.exists() and re.search(r"(^|[\s\"'])(mcp|fastmcp)\b", fp.read_text(errors="replace")):
-            mcp = True
+    # An MCP server is code that constructs one -- not a repo whose keywords
+    # or optional extras mention "mcp" (that misread a CLI tool as a server).
+    mcp_files = [rel(p) for p in all_files
+                 if p.suffix in (".py", ".js", ".mjs", ".cjs", ".ts")
+                 and "test" not in p.relative_to(root).parts[0].lower()
+                 and p.stat().st_size < MAX_BYTES
+                 and MCP_SERVER_RE.search(p.read_text(errors="replace"))]
+    mcp = bool(mcp_files)
+    pyproject = root / "pyproject.toml"
+    pkg_json = _json(root / "package.json")
+    cli = (pyproject.exists() and "[project.scripts]" in pyproject.read_text(errors="replace")) \
+        or bool(pkg_json.get("bin"))
     if mcp and not is_plugin:
-        unsandboxed.append("the repo is an MCP server (runs as its own process)")
+        # A CLI that ships an optional server is a CLI; say where the server is.
+        unsandboxed.append(
+            f"{'includes an optional' if cli else 'is an'} MCP server "
+            f"(runs as its own process if registered): {', '.join(mcp_files[:3])}")
 
-    kind = ("plugin" if is_plugin or is_marketplace else "mcp" if mcp
-            else "skill" if skill_files else "other")
+    kind = ("plugin" if is_plugin or is_marketplace else "cli" if cli
+            else "mcp" if mcp else "skill" if skill_files else "other")
     return {
         "kind": kind, "is_plugin": is_plugin, "is_marketplace": is_marketplace,
         "plugin_name": plugin_json.get("name"),
@@ -166,16 +188,29 @@ def classify(root: Path) -> dict:
     }
 
 
-def description_chars(root: Path, skill_dirs: list[str]) -> int:
+def descriptions(root: Path, skill_dirs: list[str]) -> dict[str, str]:
     """Skill descriptions are loaded into every session; bodies are not."""
-    total = 0
+    out = {}
     for d in skill_dirs:
         fm = frontmatter((root / d / "SKILL.md").read_text(errors="replace"))
         m = re.search(r"^description:\s*(.*?)(?=^[A-Za-z_-]+:|\Z)", fm, re.S | re.M)
         if m:
             text = re.sub(r"^[>|][-+]?\s*", "", m.group(1).strip())   # YAML block markers
-            total += len(" ".join(text.split()).strip("\"'"))
-    return total
+            out[d] = " ".join(text.split()).strip("\"'")
+    return out
+
+
+def description_chars(root: Path, skill_dirs: list[str]) -> int:
+    return sum(len(t) for t in descriptions(root, skill_dirs).values())
+
+
+def greedy_triggers(root: Path, skill_dirs: list[str]) -> list[str]:
+    out = []
+    for d, text in descriptions(root, skill_dirs).items():
+        hits = sorted({m.group(0) for m in GREEDY_RE.finditer(text)})
+        if hits:
+            out.append(f"{d}: {', '.join(hits)}")
+    return out
 
 
 def scan(root: Path) -> tuple[list[dict], set[str], int, int]:
@@ -226,6 +261,7 @@ def audit(root: Path) -> dict:
     flags, domains, n_files, n_lines = scan(root)
     return {**info, "files_scanned": n_files, "lines": n_lines,
             "always_on_description_chars": description_chars(root, info["skill_dirs"]),
+            "greedy_triggers": greedy_triggers(root, info["skill_dirs"]),
             "flags": flags, "n_high": sum(f["severity"] == "HIGH" for f in flags),
             "outbound_domains": sorted(domains)}
 
@@ -248,6 +284,10 @@ def main(argv: list[str] | None = None) -> int:
         print("RUNS OUTSIDE THE SANDBOX:")
         for u in r["unsandboxed"]:
             print(f"  - {u}")
+    if r["greedy_triggers"]:
+        print("TRIGGER-GREEDY description (may take requests from skills you rely on):")
+        for g in r["greedy_triggers"]:
+            print(f"  - {g}")
     chars = r["always_on_description_chars"]
     print(f"always-on description cost: {chars} chars (~{chars // 4} tokens per session)")
     print(f"outbound domains in code: {', '.join(r['outbound_domains'][:25]) or 'none'}")
