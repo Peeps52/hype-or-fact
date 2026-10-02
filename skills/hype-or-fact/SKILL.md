@@ -37,6 +37,12 @@ there are any. If there aren't and `whisper-cli` or `whisper` is installed,
 run `ffmpeg -i video.mp4 -ac 1 -ar 16000 a.wav` and transcribe that. For
 on-screen text, extract a few frames with ffmpeg and look at them.
 
+If the platform refuses the download because the post is login-only or
+age/region-restricted ("isn't available to everyone"), say so plainly and
+ask the user for the tool's name, a screenshot, or permission to view the
+post in their logged-in browser. Don't load their browser cookies into a
+downloader on your own initiative. Carry on with any other links meanwhile.
+
 Creators often gate the link ("comment X for the link"), so get the tool's
 *name* from the speech, on-screen text and caption. Then search
 `gh search repos "<name>" --sort stars --limit 5`, plus a web search if
@@ -107,10 +113,13 @@ loads. Say whether a flagged file is reachable from what gets installed.
 
 ## 3. Ask before spending
 
-The A/B step runs third-party code and costs real money. Each `claude -p`
-run pays to load the user's whole setup, often $0.20 to $0.40 before any
-work, and a substantial task costs $1 to $6. Only take candidates that
-survived steps 1 and 2, and at most three per session.
+The A/B step runs third-party code and costs usage. On an API key that is
+billed money. On a Claude subscription it comes out of the plan's usage
+limits, and the dollar figures the script prints are API-equivalent
+estimates, not charges. Say which applies. Each `claude -p` run pays to load
+the user's whole setup, often 0.20 to 0.40 USD-equivalent before any work,
+and a substantial task costs 1 to 6 USD-equivalent. Only take candidates
+that survived steps 1 and 2, and at most three per session.
 
 Choose the tasks, then print the exact plan without spending anything:
 

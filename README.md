@@ -111,9 +111,11 @@ The skill drives these. You can also run them yourself:
 | `audit.py` | kind, unsandboxed parts, red flags, always-on context cost |
 | `ab_test.py` | the sandboxed blind A/B test (`--dry-run` to see the plan and cost) |
 
-Each run costs real money on your Claude plan or API key. A `claude -p` run
-pays to load your whole setup, often $0.20 to $0.40 before any work. A
-substantial task costs $1 to $6 per side. `--budget` caps each run and
+Each run uses your Claude usage. With an API key it is billed in dollars.
+On a Claude subscription it comes out of your plan's usage limits instead,
+and the dollar figures are API-equivalent estimates, not charges. A
+`claude -p` run pays to load your whole setup, often $0.20 to $0.40 worth
+before any work, and a substantial task $1 to $6 worth per side. `--budget` caps each run and
 `--max-total` caps the whole test.
 
 ## Development
