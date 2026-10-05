@@ -17,9 +17,12 @@ Hype or Fact is a Claude Code skill that answers that with evidence. It:
 4. **Measures it** after asking you. It runs your own tasks twice, with and
    without the candidate, in throwaway sandboxed copies of your project, and
    compares the outputs **blind**.
-5. **Gives a verdict** (FACT, NICHE, ALREADY HAVE, HYPE, UNSAFE or UNTESTED)
-   with the numbers behind it: blind result, cost and time multiples, whether
-   the tool even triggered, and how much context it costs every session.
+5. **Gives a verdict** (FACT, NICHE, ALREADY HAVE, HYPE, UNSAFE or UNTESTED).
+   HYPE includes tools that work but whose downsides (cost, slowness,
+   context in every session, risk to your accounts) outweigh what they add.
+   The verdict comes with the numbers behind it: blind result, cost and time
+   multiples, whether the tool even triggered, and how much context it costs
+   every session.
 
 The blind part matters. Knowing which output came from the shiny new tool
 biases you towards it. So the outputs are shuffled into `A` and `B`, the

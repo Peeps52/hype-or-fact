@@ -257,10 +257,25 @@ The verdict categories:
   when invoked by name.
 - **ALREADY HAVE**: covered by an installed tool. Name which.
 - **HYPE**: no measurable difference, doesn't work, or the claims outrun the
-  code.
+  code. Also when it **works, but the negatives outweigh the positives**
+  for this user, e.g.:
+  - cost or time multiples out of proportion to the gain;
+  - always-on context cost for something rarely used;
+  - a trigger-greedy description that takes requests from skills they rely on;
+  - account-ban or credential exposure from using their logins;
+  - unsandboxed hooks or servers for a small benefit.
 - **UNSAFE**: a reachable HIGH flag or an unacceptable unsandboxed part.
   Give file:line.
 - **UNTESTED**: couldn't be tested in isolation. Give the reason.
+
+Weigh positives against negatives explicitly before choosing between FACT,
+NICHE and HYPE. A tool that genuinely works can still be HYPE for this user.
+When that decides the verdict, list both sides briefly: what it really does
+well, what it costs, and why the costs win. The user can then disagree with
+your weighting, which they can't do with a bare label. The distinction from
+the neighbours: NICHE means the benefit is real but narrow, and the costs
+are small enough to be worth paying for that narrow use. UNSAFE means a
+specific security problem, not a weighing.
 
 Then give the evidence behind it:
 - the blind result per pair;

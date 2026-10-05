@@ -24,3 +24,9 @@ def test_verdict_requires_plain_description_and_claims_check():
     assert "**What it actually does**" in text
     assert "**The claims check**" in text
     assert "Write down the creator's claims" in text
+
+
+def test_hype_covers_working_tools_whose_costs_win():
+    text = SKILL.read_text()
+    assert "negatives outweigh the positives" in text
+    assert "A tool that genuinely works can still be HYPE" in text
