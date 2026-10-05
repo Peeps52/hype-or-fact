@@ -17,3 +17,10 @@ def test_frontmatter_has_name_and_description():
     fm = SKILL.read_text().split("---")[1]
     assert re.search(r"^name: hype-or-fact$", fm, re.M)
     assert re.search(r"^description: .{100,}", fm, re.M)
+
+
+def test_verdict_requires_plain_description_and_claims_check():
+    text = SKILL.read_text()
+    assert "**What it actually does**" in text
+    assert "**The claims check**" in text
+    assert "Write down the creator's claims" in text

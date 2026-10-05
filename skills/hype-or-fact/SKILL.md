@@ -29,16 +29,16 @@ config directory.
 
 **A repo link.** Run `python3 scripts/trending.py --repo <url-or-owner/name>`.
 
-**A video (reel, TikTok, YouTube, X).** If a video-watching skill is
-installed, use it. Otherwise:
-`yt-dlp -o video.mp4 <url>` and `yt-dlp --skip-download --write-info-json <url>`
-(the caption is in the `.info.json`). For speech, use native captions if
-there are any. If there aren't and `whisper-cli` or `whisper` is installed,
-run `ffmpeg -i video.mp4 -ac 1 -ar 16000 a.wav` and transcribe that. For
-on-screen text, extract a few frames with ffmpeg and look at them.
+**A video (reel, TikTok, YouTube, X).** Run
+`python3 scripts/video.py <url> --out <tmp>/video`. It prints JSON with the
+title, uploader, post caption, a transcript and frame paths. The transcript
+comes from platform captions, or from a local Whisper when there are none;
+the script finds the model itself, or uses `$WHISPER_MODEL`. Read the
+frames for on-screen text such as burned-in captions, cost or time
+readouts, and repo names. If `transcript` is empty, `transcript_source`
+says why. Work from the caption and frames then, and say so in the verdict.
 
-If the platform refuses the download because the post is login-only or
-age/region-restricted ("isn't available to everyone"), say so plainly and
+If the script reports a login-only or restricted post, say so plainly and
 ask the user for the tool's name, a screenshot, or permission to view the
 post in their logged-in browser. Don't load their browser cookies into a
 downloader on your own initiative. Carry on with any other links meanwhile.
@@ -48,6 +48,14 @@ Creators often gate the link ("comment X for the link"), so get the tool's
 `gh search repos "<name>" --sort stars --limit 5`, plus a web search if
 needed. Confirm the match (description, author handle, creation date) before
 going on; same-named repos are common.
+
+**Write down the creator's claims** while you have the video: each
+concrete, checkable promise, close to their words. For example, "turns any
+project into a launch video in seconds", "30% cheaper", "scores your CV the
+way the ATS will". Note any numbers shown on screen, including ones that
+contradict the pitch, such as a run time or a cost. These claims are what
+made the user curious, so they are what the verdict has to answer. If the
+candidate came from a repo link, take the claims from the README instead.
 
 **No link: "what's trending".** Run
 `python3 scripts/trending.py --days 30 --top 25`. It ranks recently created
@@ -88,7 +96,12 @@ Code's sandbox** (plugin hooks, MCP and LSP servers, hooks in skill
 frontmatter), red-flag code patterns, and the always-on context cost.
 
 Then read the README and the SKILL.md, plugin manifest or server entry point
-yourself, looking for the gap between the claims and the code:
+yourself. Work out **what it actually does**, from the code rather than the
+marketing: the mechanism (a prompt, a CLI, a server, an installer for other
+tools), what it installs or changes on the machine, and what it needs (API
+keys, logins, network). Then check each claim you wrote down against the
+README and the code. Creators routinely promise more than the author does.
+Look for the gap between claims and code:
 
 - Does the code do what the README promises, or is it a prompt behind a
   marketing page? A 40-line SKILL.md can be excellent. Just call it what it is.
@@ -145,7 +158,9 @@ Show the user the candidates, tasks, and worst-case cost from the dry run,
 and wait for a yes. One yes covers that plan. A new candidate or a bigger
 budget needs another.
 
-**Choosing tasks** matters more than anything else in the test. Use the
+**Choosing tasks** matters more than anything else in the test. Where the
+creator's headline claim can be tested, make it the first task, because
+that is the claim the user wants settled. Use the
 user's *real* work: a copy of an actual project (`--project`; `.git`,
 secrets, databases and symlinks are left out of the copy) and a task they
 would plausibly ask for that the candidate claims to help with. At least one
@@ -220,8 +235,22 @@ plain "design a logo" request among 200+ installed skills. That is NICHE
 
 ## 6. Verdict
 
-Lead with the verdict. Write one short paragraph per candidate with the
-numbers inline, and match the user's usual preference for prose or tables.
+Every verdict has the same three parts, in this order. Keep them short,
+and match the user's usual preference for prose or tables:
+
+1. **The verdict**, in one line.
+2. **What it actually does**, in plain words, from the code: the mechanism,
+   what it installs or changes, and what it needs from the user. Someone who
+   has never seen the repo should understand what they would be installing.
+   "Three prompts, not a tool" or "an installer for a dozen scraping CLIs"
+   is the level of plainness to aim for.
+3. **The claims check**: each claim from the video or README, with what
+   happened to it: *held* (the code and test support it), *overstated*
+   (true in a weaker form; say which), *unsupported* (nothing in the code or
+   tests backs it), or *untested* (say why). Say whether an overstatement
+   came from the creator or is in the README itself.
+
+The verdict categories:
 
 - **FACT**: clearly better on the user's own tasks, at an acceptable cost.
 - **NICHE**: works, but only for something the user rarely does, or only
@@ -233,7 +262,7 @@ numbers inline, and match the user's usual preference for prose or tables.
   Give file:line.
 - **UNTESTED**: couldn't be tested in isolation. Give the reason.
 
-Give the evidence behind the verdict:
+Then give the evidence behind it:
 - the blind result per pair;
 - the cost and time multiples;
 - loaded/used;

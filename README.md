@@ -61,7 +61,10 @@ or fact: <link>", or "what's trending for Claude Code?".
 **Requirements:** Claude Code (a recent version), Python 3.9+, `git`, and
 the GitHub CLI (`gh auth login`). A/B tests need **macOS or Linux**. On
 Linux, Claude Code's sandbox also needs `bubblewrap` and `socat`. Video
-links additionally need `yt-dlp` and `ffmpeg`. Everything else is the Python
+links additionally need `yt-dlp` and `ffmpeg`. Without platform captions,
+speech needs a local Whisper (`whisper-cli` from whisper.cpp with a model,
+or `whisper`); set `WHISPER_MODEL` if the model isn't found. Without
+one, the skill works from the caption and on-screen text. Everything else is the Python
 standard library.
 
 ## Safety model
